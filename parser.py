@@ -1,3 +1,4 @@
+import csv
 import sys
 from bs4 import BeautifulSoup
 import re
@@ -41,3 +42,9 @@ for email_element in email_elements:
 for name_email in names_emails:
     print(f"First Name: {name_email[0]}, Last Name: {name_email[1]}, Email: {name_email[2]}")
 
+# Write the extracted names and emails to a CSV file
+output_file = "output.csv"
+with open(output_file, 'w', newline='') as file:
+    writer = csv.writer(file)
+    writer.writerow(['First Name', 'Last Name', 'Email'])
+    writer.writerows(names_emails)
