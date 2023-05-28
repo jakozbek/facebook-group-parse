@@ -19,18 +19,25 @@ except IOError:
 
 soup = BeautifulSoup(html, 'html.parser')
 
-# Find all <a> elements with '/user' in the href and extract the first and last name from the aria-label
-name_elements = soup.find_all('a', href=re.compile('/user'), attrs={"aria-label": True})
-names = []
-for name_element in name_elements:
-    aria_label = name_element['aria-label']
-    # Extract first and last name from the aria-label
-    match = re.match(r'^(.*?)\s(.*)$', aria_label)
-    if match:
-        first_name = match.group(1)
-        last_name = match.group(2)
-        names.append((first_name, last_name))
+# Find all <div> elements containing an email
+email_elements = soup.find_all('div', string=re.compile(r'[\w\.-]+@[\w\.-]+'))
 
-# Print the extracted names
-for name in names:
-    print(f"First Name: {name[0]}, Last Name: {name[1]}")
+# Extract the associated name for each email
+names_emails = []
+for email_element in email_elements:
+    # Find the preceding <a> element that contains the name
+    name_element = email_element.find_previous('a', href=re.compile('/user'), attrs={"aria-label": True})
+    if name_element:
+        aria_label = name_element['aria-label']
+        # Extract first and last name from the aria-label
+        match = re.match(r'^(.*?)\s(.*)$', aria_label)
+        if match:
+            first_name = match.group(1)
+            last_name = match.group(2)
+            email = email_element.text.strip()
+            names_emails.append((first_name, last_name, email))
+
+# Print the extracted names and associated emails
+for name_email in names_emails:
+    print(f"First Name: {name_email[0]}, Last Name: {name_email[1]}, Email: {name_email[2]}")
+
