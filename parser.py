@@ -3,7 +3,40 @@ import sys
 from bs4 import BeautifulSoup
 import re
 
-from strip_classes import strip_html_classes
+def strip_html_classes(html):
+    soup = BeautifulSoup(html, "html.parser")
+
+    # Find all elements with the class attribute
+    elements = soup.find_all(attrs={"class": True})
+    elements2 = soup.find_all(attrs={"style": True})
+
+    for meta in soup.find_all("meta"):
+        meta.extract()
+
+    for style in soup.find_all("style"):
+        style.extract()
+
+    for script in soup.find_all("script"):
+        script.extract()
+
+    for link in soup.find_all("link"):
+        link.extract()
+
+    for path in soup.find_all("path"):
+        path.extract()
+
+    for img in soup.find_all("image"):
+        img.extract()
+
+    # Remove the class attribute from each element
+    for element in elements:
+        del element["class"]
+
+    for element in elements2:
+        del element["style"]
+
+    # Return the modified HTML
+    return str(soup)
 
 def parse_for_fb(html_file):
     # Read the HTML file
@@ -37,8 +70,12 @@ def parse_for_fb(html_file):
                 names_emails.append((first_name, last_name, email))
 
     # Print the extracted names and associated emails
-    for name_email in names_emails:
-        print(f"First Name: {name_email[0]}, Last Name: {name_email[1]}, Email: {name_email[2]}")
+    #for name_email in names_emails:
+    #    print(f"First Name: {name_email[0]}, Last Name: {name_email[1]}, Email: {name_email[2]}")
+
+    length_of_emails = len(names_emails)
+
+    print(f"Parsed {length_of_emails} emails in file")
 
     return names_emails
 
