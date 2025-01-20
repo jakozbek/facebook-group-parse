@@ -1,7 +1,14 @@
+#!/usr/bin/env python
+
 import csv
 import sys
+from typing import TypedDict
 from bs4 import BeautifulSoup
 import re
+from datetime import datetime
+
+from upload import upload_subscriber
+
 
 def strip_html_classes(html):
     soup = BeautifulSoup(html, "html.parser")
@@ -38,10 +45,17 @@ def strip_html_classes(html):
     # Return the modified HTML
     return str(soup)
 
+
+class UserInfo(TypedDict):
+    email: str
+    fname: str
+    lname: str
+
+
 def parse_for_fb(html_file):
     # Read the HTML file
     try:
-        with open(html_file, 'r') as file:
+        with open(html_file, "r") as file:
             html = file.read()
     except IOError:
         print(f"Error: Unable to read the HTML file '{html_file}'.")
@@ -49,41 +63,42 @@ def parse_for_fb(html_file):
 
     cleaned_html = strip_html_classes(html)
 
-    soup = BeautifulSoup(cleaned_html, 'html.parser')
+    soup = BeautifulSoup(cleaned_html, "html.parser")
 
     # Find all <div> elements containing an email
-    email_elements = soup.find_all('div', string=re.compile(r'[\w\.-]+@[\w\.-]+'))
+    email_elements = soup.find_all("div", string=re.compile(r"[\w\.-]+@[\w\.-]+"))
 
     # Extract the associated name for each email
-    names_emails = []
+    users = []
     for email_element in email_elements:
         # Find the preceding <a> element that contains the name
-        name_element = email_element.find_previous('a', href=re.compile('/user'), attrs={"aria-label": True})
+        name_element = email_element.find_previous(
+            "a", href=re.compile("/user"), attrs={"aria-label": True}
+        )
         if name_element:
-            aria_label = name_element['aria-label']
+            aria_label = name_element["aria-label"]
             # Extract first and last name from the aria-label
-            match = re.match(r'^(.*?)\s(.*)$', aria_label)
+            match = re.match(r"^(.*?)\s(.*)$", aria_label)
             if match:
                 first_name = match.group(1)
                 last_name = match.group(2)
                 email = email_element.text.strip()
-                names_emails.append((first_name, last_name, email))
+                userinfo = UserInfo(email=email, fname=first_name, lname=last_name)
+                users.append(userinfo)
 
-    # Print the extracted names and associated emails
-    #for name_email in names_emails:
-    #    print(f"First Name: {name_email[0]}, Last Name: {name_email[1]}, Email: {name_email[2]}")
-
-    length_of_emails = len(names_emails)
+    length_of_emails = len(users)
 
     print(f"Parsed {length_of_emails} emails in file")
 
-    return names_emails
+    return users
+
 
 def write_output(output_file, names_emails):
-    with open(output_file, 'w', newline='') as file:
+    with open(output_file, "w", newline="") as file:
         writer = csv.writer(file)
-        writer.writerow(['First Name', 'Last Name', 'Email'])
+        writer.writerow(["First Name", "Last Name", "Email"])
         writer.writerows(names_emails)
+
 
 # Check if the HTML file path is provided as a command-line argument
 if len(sys.argv) < 2:
@@ -97,4 +112,11 @@ all_names_emails = []
 for html_file in html_files:
     all_names_emails += parse_for_fb(html_file)
 
-write_output('output.csv', all_names_emails)
+# Upload via API
+for user in all_names_emails:
+    upload_subscriber(user["email"], user["fname"], user["lname"])
+
+# TODO: make write to csv an optinal use
+# Make the outfile file name today's date as YYYYMMDD.csv
+# write_output(f"{datetime.now().strftime('%y%m%d')}.csv", all_names_emails)
+# write_output("output.csv", all_names_emails)

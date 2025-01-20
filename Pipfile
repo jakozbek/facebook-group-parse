@@ -5,6 +5,8 @@ name = "pypi"
 
 [packages]
 bs4 = "*"
+mailerlite = "*"
+python-dotenv = "*"
 
 [dev-packages]
 
