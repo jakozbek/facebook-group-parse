@@ -5,9 +5,22 @@ import sys
 from typing import TypedDict
 from bs4 import BeautifulSoup
 import re
+import argparse
 from datetime import datetime
 
 from upload import upload_subscriber
+
+parser = argparse.ArgumentParser(
+    description="Parse HTML files for email addresses and names"
+)
+parser.add_argument("html_files", nargs="+", help="HTML file paths to parse")
+parser.add_argument("--ml", action="store_true", help="Upload to mailing list")
+parser.add_argument("--csv", action="store_true", help="Write output to CSV file")
+parser.add_argument(
+    "--csv-filename", default=None, help="Custom CSV filename (default: YYMMDD.csv)"
+)
+
+args = parser.parse_args()
 
 
 def strip_html_classes(html):
@@ -100,23 +113,34 @@ def write_output(output_file, names_emails):
         writer.writerows(names_emails)
 
 
-# Check if the HTML file path is provided as a command-line argument
-if len(sys.argv) < 2:
-    print("Please provide the HTML file path as a command-line argument.")
+if not args.html_files:
+    print("Please provide HTML file paths as command-line arguments.")
     sys.exit(1)
-
-html_files = sys.argv[1:]
 
 all_names_emails = []
 
-for html_file in html_files:
+for html_file in args.html_files:
     all_names_emails += parse_for_fb(html_file)
 
 # Upload via API
-for user in all_names_emails:
-    upload_subscriber(user["email"], user["fname"], user["lname"])
+if args.ml:
+    print("Uploading to mailing list...")
+    if not all_names_emails:
+        print("No emails found to upload.")
+        sys.exit(0)
 
-# TODO: make write to csv an optinal use
-# Make the outfile file name today's date as YYYYMMDD.csv
-# write_output(f"{datetime.now().strftime('%y%m%d')}.csv", all_names_emails)
-# write_output("output.csv", all_names_emails)
+    for user in all_names_emails:
+        upload_subscriber(user["email"], user["fname"], user["lname"])
+
+
+if args.csv:
+    if args.csv_filename:
+        output_filename = args.csv_filename
+    else:
+        output_filename = f"{datetime.now().strftime('%y%m%d')}.csv"
+
+    write_output(
+        output_filename,
+        [[user["fname"], user["lname"], user["email"]] for user in all_names_emails],
+    )
+    print(f"Data written to {output_filename}")

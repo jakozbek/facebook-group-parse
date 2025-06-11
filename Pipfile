@@ -7,6 +7,7 @@ name = "pypi"
 bs4 = "*"
 mailerlite = "*"
 python-dotenv = "*"
+pillow = "*"
 
 [dev-packages]
 
